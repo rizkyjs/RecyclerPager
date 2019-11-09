@@ -11,6 +11,7 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+
 import me.relex.recyclerpager.FragmentRecyclerAdapter;
 import me.relex.recyclerpager.FragmentViewHolder;
 import me.relex.recyclerpager.SnapPageScrollListener;
@@ -19,24 +20,28 @@ import me.relex.smarttablayout.SmartTabLayout2;
 public class MainActivity extends AppCompatActivity {
 
     private TestAdapter mAdapter;
+    private DepthPageTransformer zoomOutTranformer = new DepthPageTransformer();
 
-    @Override protected void onCreate(Bundle savedInstanceState) {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        LinearLayoutManager linearLayoutManager =
+        final LinearLayoutManager linearLayoutManager =
                 new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false) {
 
-                    @Override public void stopIgnoringView(@NonNull View view) {
+                    @Override
+                    public void stopIgnoringView(@NonNull View view) {
                         super.stopIgnoringView(view);
                     }
 
-                    @Override public void ignoreView(@NonNull View view) {
+                    @Override
+                    public void ignoreView(@NonNull View view) {
                         super.ignoreView(view);
                     }
                 };
 
-        RecyclerView recyclerView = findViewById(R.id.recycler_view);
+        final RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(linearLayoutManager);
 
         mAdapter = new TestAdapter(getSupportFragmentManager());
@@ -44,34 +49,56 @@ public class MainActivity extends AppCompatActivity {
         PagerSnapHelper snapHelper = new PagerSnapHelper();
         snapHelper.attachToRecyclerView(recyclerView);
 
+
         SmartTabLayout2 smartTabLayout2 = findViewById(R.id.tab_layout);
         smartTabLayout2.attachToRecyclerView(recyclerView);
         mAdapter.registerAdapterDataObserver(smartTabLayout2.getAdapterDataObserver());
 
         recyclerView.addOnScrollListener(new SnapPageScrollListener() {
-            @Override public void onPageScrolled(int position, float positionOffset,
-                    int positionOffsetPixels) {
+            @Override
+            public void onPageScrolled(int position, float positionOffset,
+                                       int positionOffsetPixels) {
                 Log.i("SnapPageScrollListener", "onPageScrolled = "
                         + position
                         + " positionOffset = "
                         + positionOffset
                         + " positionOffsetPixels = "
                         + positionOffsetPixels);
+
+                //可见的view
+                final int firstVisibleItemPosition1 = linearLayoutManager.findFirstVisibleItemPosition();
+                final int lastVisibleItemPosition = linearLayoutManager.findLastVisibleItemPosition();
+                for (int i = firstVisibleItemPosition1; i <= lastVisibleItemPosition; i++) {
+                    Log.e("TAG", "i is " + i);
+                    final View child = linearLayoutManager.findViewByPosition(i);
+                    if (child == null) {
+                        break;
+                    }
+                    float transformPos = (float) (child.getLeft() - recyclerView.getScrollX()) / (float) recyclerView.getWidth();
+                    if (positionOffset == 0 && positionOffsetPixels == 0) {
+                        transformPos = 0;
+                    }
+                    Log.e("TAG", "transformPos is " + transformPos);
+                    zoomOutTranformer.transformPage(child, transformPos);
+                }
             }
 
-            @Override public void onPageSelected(int position) {
+            @Override
+            public void onPageSelected(int position) {
                 Log.w("SnapPageScrollListener", "onPageSelected = " + position);
             }
         });
 
         findViewById(R.id.add_button).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
+            @Override
+            public void onClick(View v) {
                 mAdapter.add();
             }
         });
 
         findViewById(R.id.remove_button).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
+            @Override
+            public void onClick(View v) {
                 mAdapter.remove();
             }
         });
@@ -86,35 +113,42 @@ public class MainActivity extends AppCompatActivity {
             count = 3;
         }
 
-        @NonNull @Override
+        @NonNull
+        @Override
         public FragmentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             FragmentViewHolder vh = super.onCreateViewHolder(parent, viewType);
             return vh;
         }
 
-        @Override public Fragment getItem(int position) {
+        @Override
+        public Fragment getItem(int position) {
             return PageFragment.newInstance(position);
         }
 
-        @Override public int getItemCount() {
+        @Override
+        public int getItemCount() {
             return count;
         }
 
-        @Override public CharSequence getPageTitle(int position) {
+        @Override
+        public CharSequence getPageTitle(int position) {
             return "Title-" + position;
         }
 
-        @Override public void onViewAttachedToWindow(@NonNull FragmentViewHolder holder) {
+        @Override
+        public void onViewAttachedToWindow(@NonNull FragmentViewHolder holder) {
             super.onViewAttachedToWindow(holder);
             Log.e("MainActivity", "onViewAttachedToWindow = " + holder.getLayoutPosition());
         }
 
-        @Override public void onViewDetachedFromWindow(@NonNull FragmentViewHolder holder) {
+        @Override
+        public void onViewDetachedFromWindow(@NonNull FragmentViewHolder holder) {
             super.onViewDetachedFromWindow(holder);
             Log.e("MainActivity", "onViewDetachedFromWindow " + holder.getLayoutPosition());
         }
 
-        @Override public void onViewRecycled(@NonNull FragmentViewHolder holder) {
+        @Override
+        public void onViewRecycled(@NonNull FragmentViewHolder holder) {
             super.onViewRecycled(holder);
             Log.e("MainActivity", "onViewRecycled = " + holder.getLayoutPosition());
         }
